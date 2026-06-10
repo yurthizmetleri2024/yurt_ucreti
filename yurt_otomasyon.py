@@ -1,36 +1,26 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
+from PIL import Image
 
-# 1. SAYFA VE MOBİL APP AYARLARI
-# Menülerin solda değil, uygulamanın içinde olmasını sağlamak için layout="centered" yapıyoruz.
-st.set_page_config(page_title="KYK Analiz", page_icon="🏢", layout="centered", initial_sidebar_state="collapsed")
+# --- 1. SAYFA VE MOBİL APP AYARLARI ---
+# Klasörde logo.png varsa kullanır, yoksa standart bina ikonu koyar
+try:
+    uygulama_ikonu = Image.open("logo.png")
+    st.set_page_config(page_title="KYK Analiz", page_icon=uygulama_ikonu, layout="centered", initial_sidebar_state="collapsed")
+except:
+    st.set_page_config(page_title="KYK Analiz", page_icon="🏢", layout="centered", initial_sidebar_state="collapsed")
 
-# Streamlit imzalarını ve menüleri gizleyen özel CSS
+# Streamlit izlerini gizleyen ve sekmeleri ekrana yayan CSS
 gizleme_stili = """
             <style>
             #MainMenu {visibility: hidden;}
             footer {visibility: hidden;}
             header {visibility: hidden;}
-            
-            /* Mobilde üstteki boşluğu da daraltarak tam ekran uygulama hissi verir */
-            .block-container {
-                padding-top: 1rem;
-                padding-bottom: 0rem;
-            }
+            .block-container { padding-top: 1rem; padding-bottom: 0rem; }
+            div[data-testid="stTabs"] button { flex: 1; font-size: 16px; font-weight: bold; }
             </style>
             """
 st.markdown(gizleme_stili, unsafe_allow_html=True)
-
-
-# Mobil uygulama hissi veren özel CSS (Gereksiz boşlukları gizler, sekmeleri ekrana tam yayar)
-st.markdown("""
-    <style>
-    .block-container { padding-top: 1rem; padding-bottom: 2rem; }
-    /* Sekme butonlarını mobil uygulamalardaki gibi tam genişliğe yayar */
-    div[data-testid="stTabs"] button { flex: 1; font-size: 16px; font-weight: bold; }
-    </style>
-""", unsafe_allow_html=True)
 
 st.title("📱 Yurt Yönetim Paneli")
 
@@ -46,40 +36,37 @@ def veri_hazirla():
 
 df = veri_hazirla()
 
-# --- 3. APP MENÜSÜ (SEKMELER) ---
-# Ekranın ana yönlendiricisi olan sekmelerimizi oluşturuyoruz.
-tab_ayar, tab_ucret, tab_gelir = st.tabs(["⚙️ Senaryo", "💸 Ücretler", "📊 Gelirler"])
+# --- 3. APP MENÜSÜ (İKİ SEKME) ---
+tab_ucret, tab_gelir = st.tabs(["💸 Ücretler", "📊 Gelirler"])
 
-# --- 4. AYARLAR MODÜLÜ ---
-with tab_ayar:
+# --- 4. ÜCRETLER VE SENARYO MODÜLÜ ---
+with tab_ucret:
     st.subheader("Artış Modelini Belirle")
-    # Horizontal=True ile mobilde yatay butonlar gibi durmasını sağlıyoruz
     model_secimi = st.radio(
         "Hesaplama Kriteri:", 
         ("TÜFE Bazlı", "ÜFE Bazlı", "Manuel Oran"), 
         horizontal=True 
     )
     
+    # Seçime göre dinamik oran belirleme
     if model_secimi == "TÜFE Bazlı":
         oran = st.slider("Yıllık TÜFE Oranı (%)", 0.0, 120.0, 32.61, 0.5)
     elif model_secimi == "ÜFE Bazlı":
         oran = st.slider("Yıllık ÜFE Oranı (%)", 0.0, 120.0, 28.93, 0.5)
     else:
         oran = st.number_input("Özel Artış Oranı (%)", 0.0, 200.0, 50.0, 1.0)
-        
-    st.success("Değişiklikler işlendi. Üst menüden Ücretler ve Gelirler detaylarına geçebilirsiniz.")
 
-# --- 5. ORTAK HESAPLAMA MOTORU ---
-# Bu blok arka planda çalışıp seçilen orana göre tüm matematiği bitirir.
-df['Yeni Ücret'] = df['Mevcut Ücret'] * (1 + (oran / 100))
-df['Ücret Farkı'] = df['Yeni Ücret'] - df['Mevcut Ücret']
+    # --- HESAPLAMA MOTORU (Oran belirlendikten hemen sonra çalışır) ---
+    df['Yeni Ücret'] = df['Mevcut Ücret'] * (1 + (oran / 100))
+    df['Ücret Farkı'] = df['Yeni Ücret'] - df['Mevcut Ücret']
 
-df['Eski Aylık Toplam'] = df['Mevcut Ücret'] * df['Öğrenci Sayısı']
-df['Yeni Aylık Toplam'] = df['Yeni Ücret'] * df['Öğrenci Sayısı']
-df['Aylık Ek Gelir'] = df['Yeni Aylık Toplam'] - df['Eski Aylık Toplam']
-
-# --- 6. ÜCRETLER MODÜLÜ ---
-with tab_ucret:
+    df['Eski Aylık Toplam'] = df['Mevcut Ücret'] * df['Öğrenci Sayısı']
+    df['Yeni Aylık Toplam'] = df['Yeni Ücret'] * df['Öğrenci Sayısı']
+    df['Aylık Ek Gelir'] = df['Yeni Aylık Toplam'] - df['Eski Aylık Toplam']
+    
+    st.divider() # Arayüzü rahatlatmak için ayırıcı çizgi
+    
+    # Oran ve Tablo Gösterimi
     st.metric("Uygulanan Zam Oranı", f"% {oran:.2f}")
     st.subheader("Öğrenci Başına Yansımalar")
     
@@ -94,16 +81,22 @@ with tab_ucret:
         hide_index=True
     )
 
-# --- 7. GELİRLER MODÜLÜ ---
+# --- 5. GELİRLER MODÜLÜ ---
 with tab_gelir:
     st.subheader("Kurumsal Bütçe Analizi")
     
+    # Toplam gelir kartları
     c1, c2 = st.columns(2)
     c1.metric("Mevcut Toplam", f"{df['Eski Aylık Toplam'].sum():,.0f} TL".replace(",", "X").replace(".", ",").replace("X", "."))
     c2.metric("Yeni Toplam", f"{df['Yeni Aylık Toplam'].sum():,.0f} TL".replace(",", "X").replace(".", ",").replace("X", "."))
+    
+    # Net Artış Vurgusu
     st.metric("Aylık Net Gelir Artışı", f"+ {df['Aylık Ek Gelir'].sum():,.0f} TL".replace(",", "X").replace(".", ",").replace("X", "."))
     
+    st.divider()
     st.caption("Mevcut vs Yeni Gelir Karşılaştırması")
+    
+    # Grafik (KIBRIS sırasını korur)
     st.bar_chart(
         df, 
         x='Yurt Tipi', 
