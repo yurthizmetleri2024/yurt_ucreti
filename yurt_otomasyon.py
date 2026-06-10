@@ -4,7 +4,24 @@ import numpy as np
 
 # 1. SAYFA VE MOBİL APP AYARLARI
 # Menülerin solda değil, uygulamanın içinde olmasını sağlamak için layout="centered" yapıyoruz.
-st.set_page_config(page_title="KYK Analiz", layout="centered", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="KYK Analiz", page_icon="🏢", layout="centered", initial_sidebar_state="collapsed")
+
+# Streamlit imzalarını ve menüleri gizleyen özel CSS
+gizleme_stili = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            header {visibility: hidden;}
+            
+            /* Mobilde üstteki boşluğu da daraltarak tam ekran uygulama hissi verir */
+            .block-container {
+                padding-top: 1rem;
+                padding-bottom: 0rem;
+            }
+            </style>
+            """
+st.markdown(gizleme_stili, unsafe_allow_html=True)
+
 
 # Mobil uygulama hissi veren özel CSS (Gereksiz boşlukları gizler, sekmeleri ekrana tam yayar)
 st.markdown("""
