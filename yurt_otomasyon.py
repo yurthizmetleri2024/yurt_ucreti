@@ -3,12 +3,23 @@ import pandas as pd
 from PIL import Image
 
 # --- 1. SAYFA VE MOBİL APP AYARLARI ---
-# Klasörde logo.png varsa kullanır, yoksa standart bina ikonu koyar
+# Başlığı "Yurt Ücreti Hesaplama" olarak her iki durumda da garanti altına alıyoruz
 try:
     uygulama_ikonu = Image.open("logo.png")
-    st.set_page_config(page_title="KYK Analiz", page_icon=uygulama_ikonu, layout="centered", initial_sidebar_state="collapsed")
-except:
-    st.set_page_config(page_title="KYK Analiz", page_icon="🏢", layout="centered", initial_sidebar_state="collapsed")
+    st.set_page_config(
+        page_title="Yurt Ücreti Hesaplama", 
+        page_icon=uygulama_ikonu, 
+        layout="centered", 
+        initial_sidebar_state="collapsed"
+    )
+except Exception as e:
+    # Logo okunamazsa bile başlık artık doğru görünecek
+    st.set_page_config(
+        page_title="Yurt Ücreti Hesaplama", 
+        page_icon="🏢", 
+        layout="centered", 
+        initial_sidebar_state="collapsed"
+    )
 
 # Streamlit izlerini gizleyen ve sekmeleri ekrana yayan CSS
 gizleme_stili = """
@@ -48,7 +59,6 @@ with tab_ucret:
         horizontal=True 
     )
     
-    # Seçime göre dinamik oran belirleme
     if model_secimi == "TÜFE Bazlı":
         oran = st.slider("Yıllık TÜFE Oranı (%)", 0.0, 120.0, 32.61, 0.5)
     elif model_secimi == "ÜFE Bazlı":
@@ -56,7 +66,7 @@ with tab_ucret:
     else:
         oran = st.number_input("Özel Artış Oranı (%)", 0.0, 200.0, 50.0, 1.0)
 
-    # --- HESAPLAMA MOTORU (Oran belirlendikten hemen sonra çalışır) ---
+    # --- HESAPLAMA MOTORU ---
     df['Yeni Ücret'] = df['Mevcut Ücret'] * (1 + (oran / 100))
     df['Ücret Farkı'] = df['Yeni Ücret'] - df['Mevcut Ücret']
 
@@ -64,9 +74,8 @@ with tab_ucret:
     df['Yeni Aylık Toplam'] = df['Yeni Ücret'] * df['Öğrenci Sayısı']
     df['Aylık Ek Gelir'] = df['Yeni Aylık Toplam'] - df['Eski Aylık Toplam']
     
-    st.divider() # Arayüzü rahatlatmak için ayırıcı çizgi
+    st.divider() 
     
-    # Oran ve Tablo Gösterimi
     st.metric("Uygulanan Zam Oranı", f"% {oran:.2f}")
     st.subheader("Öğrenci Başına Yansımalar")
     
@@ -85,18 +94,14 @@ with tab_ucret:
 with tab_gelir:
     st.subheader("Kurumsal Bütçe Analizi")
     
-    # Toplam gelir kartları
     c1, c2 = st.columns(2)
     c1.metric("Mevcut Toplam", f"{df['Eski Aylık Toplam'].sum():,.0f} TL".replace(",", "X").replace(".", ",").replace("X", "."))
     c2.metric("Yeni Toplam", f"{df['Yeni Aylık Toplam'].sum():,.0f} TL".replace(",", "X").replace(".", ",").replace("X", "."))
-    
-    # Net Artış Vurgusu
     st.metric("Aylık Net Gelir Artışı", f"+ {df['Aylık Ek Gelir'].sum():,.0f} TL".replace(",", "X").replace(".", ",").replace("X", "."))
     
     st.divider()
     st.caption("Mevcut vs Yeni Gelir Karşılaştırması")
     
-    # Grafik (KIBRIS sırasını korur)
     st.bar_chart(
         df, 
         x='Yurt Tipi', 
