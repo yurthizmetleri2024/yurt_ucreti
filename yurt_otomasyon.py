@@ -54,7 +54,7 @@ if logo_b64:
 
 st.markdown(mobil_app_kodlari, unsafe_allow_html=True)
 
-st.title("📱 Yurt Yönetim Paneli")
+st.title("📱 Yurt Ücreti Güncelleme")
 
 # --- 4. VERİ HAZIRLAMA ---
 @st.cache_data
